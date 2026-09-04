@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmentation de tumeurs cérébrales avec un U-Net hybride</title>
+<meta name="description" content="Segmenter pixel par pixel les tumeurs cérébrales sur IRM (BraTS2020) avec un U-Net doté d'une tête de classification qui filtre les faux positifs sur tissu sain.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead__top">
+    <div>
+      <h1 class="masthead__title"><a href="index.html">DAILY NEWS</a></h1>
+      <p class="masthead__sub">cahier de bord - intelligence artificielle &amp; data science</p>
+    </div>
+    <span class="masthead__issue">Dossier <span num-projet></span>/<span nb-projets></span></span></span>
+  </div>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Accueil</a>
+    <a href="a-propos.html">À propos</a>
+    <a href="parcours.html">Parcours</a>
+    <a href="projets.html" aria-current="page">Projets</a>
+    <a href="mailto:thibautjuillard21@gmail.com">Contact</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="wrap project-hero torn-bottom">
+    <p class="dossier-num" aria-hidden="true" num-projet></p>
+    <p class="kicker">Computer Vision · Imagerie Médicale · Segmentation Sémantique</p>
+    <h1 class="misprint" data-text="Segmenter avant de conclure">Segmenter avant de conclure</h1>
+    <p class="subtitle">Un U-Net entraîné à délimiter les tumeurs cérébrales sur IRM, épaulé par une tête de classification qui vérifie d'abord qu'une tumeur est bien présente avant de laisser passer le masque de segmentation.</p>
+
+    <div class="meta-row">
+      <div class="meta-box"><b>2 semaines</b>Durée</div>
+      <div class="meta-box"><b>Projet perso</b>Type</div>
+      <div class="meta-box"><b>2026</b>Réalisé en</div>
+    </div>
+
+    <ul class="taglist" aria-label="Technologies utilisées">
+      <li class="stamp stamp--pink">PyTorch</li>
+      <li class="stamp stamp--blue">U-Net</li>
+      <li class="stamp">BraTS2020</li>
+      <li class="stamp">Dice Loss</li>
+    </ul>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Le contexte</p>
+    <h2>Le problème à résoudre</h2>
+    <div class="prose">
+      <p class="dropcap">Le jeu de données BraTS2020 contient des coupes d'IRM cérébrales multimodales (4 channels) accompagnées, pour chaque pixel, d'une étiquette parmi quatre classes : fond, cœur nécrotique, œdème péritumoral et tumeur réhaussée. L'objectif n'est plus de dire « il y a une tumeur ou non » comme dans une tâche de classification, mais de tracer son contour exact, pixel par pixel (l'information dont un radiologue a réellement besoin pour évaluer un volume tumoral ou planifier une intervention).</p>
+      <p>Le piège classique d'un U-Net entraîné seul sur ce type de données : il a tendance à faire apparaître de petits « masques fantômes » sur des coupes parfaitement saines, simplement parce qu'une partie du signal ressemble localement à de la texture tumorale. En imagerie médicale, ce genre de faux positif n'est pas anodin.</p>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">L'approche</p>
+    <h2>Comment j'ai construit la solution</h2>
+    <div class="prose">
+      <p>Pour éviter de mélanger les coupes d'un même patient entre train, validation et test (un piège classique qui gonfle artificiellement les scores), le split se fait au niveau du <code>volume</code> (le patient), pas de la coupe individuelle : 70&nbsp;% des volumes pour l'entraînement, 15&nbsp;% pour la validation, 15&nbsp;% pour le test.</p>
+      <p>Le fond représentant l'écrasante majorité des pixels, j'ai rééquilibré le jeu d'entraînement en conservant toutes les coupes contenant une tumeur, et en ne gardant qu'un échantillon de 20&nbsp;% des coupes entièrement saines. Le <code>BraTSDataset</code> lit chaque coupe depuis un fichier <code>.h5</code>, convertit le masque one-hot en un simple label de classe (0 à 3), et remet l'image au format canal-premier attendu par PyTorch.</p>
+
+      <pre class="code-block"><code>class BraTSDataset(Dataset):
+    def __getitem__(self, idx):
+        with h5py.File(full_path, 'r') as f:
+            image = f['image'][()]
+            mask = f['mask'][()]
+
+        # One-hot (3 couches) -> label unique (0,1,2,3)
+        new_mask = np.zeros(mask.shape[:2], dtype=np.int64)
+        new_mask[mask[:,:,0] == 1] = 1   # Nécrotique
+        new_mask[mask[:,:,1] == 1] = 2   # Œdème
+        new_mask[mask[:,:,2] == 1] = 3   # Réhaussée
+
+        image = np.transpose(image, (2, 0, 1))  # HWC -> CHW
+        return torch.from_numpy(image).float(), torch.from_numpy(new_mask).long()</code></pre>
+
+      <p><strong>Architecture hybride.</strong> Le cœur du modèle est un U-Net classique à quatre niveaux (64 → 128 → 256 → 512 canaux) avec un bottleneck à 1024 canaux et des connexions de saut (skip connections) vers chaque niveau du décodeur. La nouveauté est ailleurs : depuis le bottleneck, un <em>global average pooling</em> alimente une petite tête de classification (deux couches linéaires + dropout + sigmoïde) qui prédit une simple probabilité : « cette coupe contient-elle une tumeur ? ». En inférence, si cette probabilité passe sous 0,5, le masque de segmentation est purement et simplement mis à zéro, quoi qu'ait prédit le décodeur. C'est ce mécanisme de <em>gating</em> qui élimine les faux positifs sur tissu sain.</p>
+
+      <pre class="code-block"><code>class UNetWithClassifier(nn.Module):
+    def forward(self, x):
+        # Encodeur + bottleneck
+        s1 = self.enc1(x); p1 = self.pool(s1)
+        s2 = self.enc2(p1); p2 = self.pool(s2)
+        s3 = self.enc3(p2); p3 = self.pool(s3)
+        s4 = self.enc4(p3); p4 = self.pool(s4)
+        bn = self.bottleneck(p4)
+
+        # Tête de classification (branchée sur le bottleneck)
+        cls_out = self.classifier(self.global_pool(bn))
+
+        # Décodeur avec skip connections
+        d4 = self.dec4(torch.cat([self.up4(bn), s4], dim=1))
+        d3 = self.dec3(torch.cat([self.up3(d4), s3], dim=1))
+        d2 = self.dec2(torch.cat([self.up2(d3), s2], dim=1))
+        d1 = self.dec1(torch.cat([self.up1(d2), s1], dim=1))
+
+        seg_out = self.final_conv(d1)
+        return seg_out, cls_out</code></pre>
+
+      <p><strong>Fonction de perte.</strong> Une Dice Loss pondérée par classe (poids 0,1 pour le fond, 1,0 pour les trois classes tumorales) gère le déséquilibre massif entre fond et tumeur. Elle est combinée à une BCE sur la sortie de classification, pondérée à 20&nbsp;% : <code>loss = dice_loss + 0.2 × bce_loss</code>. Optimiseur Adam (lr=1e-4), avec un <code>ReduceLROnPlateau</code> qui réduit le taux d'apprentissage si la loss de validation stagne.</p>
+    </div>
+    <p class="margin-note">En validation, le Dice est calculé <em>après</em> le gating par classification (le masque prédit est multiplié par 0 ou 1 selon la sortie du classifieur) : la métrique reflète donc directement la performance du pipeline complet, pas seulement celle du décodeur seul.</p>
+
+    <div class="metric-explorer" data-metric-explorer>
+      <div class="metric-explorer__head">
+        <p class="metric-explorer__title">Suivi de l'entraînement · 5 epochs</p>
+        <div class="metric-explorer__tabs" role="tablist" aria-label="Choisir la métrique affichée">
+          <button type="button" class="metric-tab is-active" data-metric="loss" role="tab" aria-selected="true">Loss</button>
+          <button type="button" class="metric-tab" data-metric="dice_class" role="tab" aria-selected="false">Dice par classe</button>
+          <button type="button" class="metric-tab" data-metric="dice_avg" role="tab" aria-selected="false">Dice tumeur moyen</button>
+        </div>
+      </div>
+      <div class="metric-explorer__chart">
+        <canvas id="metricChart" role="img" aria-label="Graphique interactif des métriques d'entraînement sur 5 epochs"></canvas>
+      </div>
+      <p class="metric-explorer__caption" data-metric-caption>Loss d'entraînement et de validation à chaque epoch. Survolez la courbe pour voir la valeur exacte.</p>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Résultats</p>
+    <h2>Ce que le modèle donne en pratique</h2>
+    <div class="stat-grid">
+      <div class="stat"><b>80,99%</b><span>Meilleur Dice moyen tumeur (C1+C2+C3), époque 4</span></div>
+      <div class="stat"><b>99,9%</b><span>Dice sur le fond, dès l'époque 2</span></div>
+      <div class="stat"><b>~44 min</b><span>Temps d'entraînement total (5 epochs, GPU Kaggle)</span></div>
+    </div>
+    <p class="prose">Dès la deuxième époque, le Dice sur le fond atteint 99,9&nbsp;%, signe que le modèle a immédiatement compris où se trouve la grande majorité des pixels non-tumoraux. La vraie difficulté se lit sur la classe C1 (cœur nécrotique) : elle part de 0,403 à la première époque (la plus petite et la plus ambiguë des trois classes tumorales) puis grimpe à 0,79 dès l'époque 2 et s'y stabilise. La loss de validation, elle, plafonne autour de 0,60-0,61 après la première époque pendant que la loss d'entraînement continue de baisser : un signe classique de début de sur-apprentissage, malgré lequel le Dice de validation continue de progresser légèrement jusqu'à l'époque 4, meilleure époque sauvegardée avec un Dice moyen tumeur de 0,8099.</p>
+
+    <div class="visual-frame">
+      <img src="ressources/projet5/res_predictions.png" alt="Comparaison entre l'image IRM d'origine, le masque de vérité terrain et le masque prédit par le modèle">
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Ce que j'ai retenu</p>
+    <h2>Le vrai apprentissage</h2>
+    <div class="prose">
+      <p>Ce projet m'a surtout montré l'intérêt de séparer explicitement « y a-t-il une tumeur ? » de « où est-elle exactement ? ». Un U-Net seul, entraîné à minimiser une Dice Loss globale, n'a aucune incitation directe à produire un masque parfaitement vide sur une coupe saine (un léger bruit suffit à faire apparaître quelques pixels prédits à tort). En greffant une tête de classification légère sur le bottleneck et en l'utilisant comme filtre à l'inférence, on obtient une sécurité supplémentaire à un coût d'entraînement quasi nul, puisqu'elle partage l'essentiel de l'encodeur avec la tâche de segmentation.</p>
+      <p>Sur le plan pratique, pondérer la Dice Loss par classe (fond à 0,1) a été indispensable : sans cette pondération, le modèle aurait toute latitude pour ignorer les classes minoritaires tout en gardant une loss globale très basse. Enfin, le split par patient plutôt que par coupe individuelle reste, à mon sens, le détail méthodologique le plus facile à oublier, et le plus dangereux si on l'oublie, tant il peut artificiellement gonfler les métriques de validation.</p>
+    </div>
+  </section>
+
+  <section class="wrap section--tight">
+    <div class="code-links">
+      <a class="btn" href="https://www.kaggle.com/code/thibautjuill/cv-brain-tumor-segmentation-unet" target="_blank" rel="noopener">Voir le code sur Kaggle</a>
+    </div>
+  </section>
+
+  <nav class="wrap project-pager" aria-label="Navigation entre projets">
+    <a href="projet-4.html">← ?</a>
+    <a href="projet-6.html">? →</a>
+  </nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h3>On en parle ?</h3>
+      <p><a href="mailto:thibautjuillard21@gmail.com">thibautjuillard21@gmail.com</a></p>
+    </div>
+    <div>
+      <h3>Ailleurs</h3>
+      <p>
+        <a href="https://www.linkedin.com/in/thibaut-juillard-b50321193/" target="_blank" rel="noopener">LinkedIn</a> ·
+        <a href="https://github.com/Thibaut3" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.kaggle.com/thibautjuill" target="_blank" rel="noopener">Kaggle</a>
+      </p>
+    </div>
+    <div class="site-stamp" role="img" aria-label="Édition 2026, imprimé numériquement"><span data-year>Édition</span></div>
+  </div>
+  <small>Merci de prendre le temps de parcourir mon Portfolio, j'essaie de le maintenir à jour !</small>
+</footer>
+
+<style>
+  .code-block {
+    background: #f4f1ea;
+    border: 1px solid #ddd6c5;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin: 1.25rem 0;
+  }
+  .code-block code {
+    white-space: pre;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var epochs = [1, 2, 3, 4, 5];
+  var metrics = {
+    loss: {
+      caption: "Loss d'entraînement et de validation à chaque epoch. Survolez la courbe pour voir la valeur exacte.",
+      datasets: [
+        { label: "Train Loss", data: [0.5117, 0.2896, 0.1960, 0.1767, 0.1655], color: "#d6336c" },
+        { label: "Val Loss", data: [0.6483, 0.6047, 0.6080, 0.6160, 0.6087], color: "#1971c2" }
+      ],
+      yTitle: "Loss"
+    },
+    dice_class: {
+      caption: "Dice Score par classe sur la validation (BG = fond, C1 = nécrotique, C2 = œdème, C3 = réhaussée).",
+      datasets: [
+        { label: "BG (fond)", data: [0.931, 0.999, 0.999, 0.999, 0.999], color: "#868e96" },
+        { label: "C1 (nécrotique)", data: [0.403, 0.768, 0.784, 0.792, 0.792], color: "#d6336c" },
+        { label: "C2 (œdème)", data: [0.787, 0.795, 0.789, 0.802, 0.794], color: "#1971c2" },
+        { label: "C3 (réhaussée)", data: [0.803, 0.817, 0.798, 0.836, 0.828], color: "#2f9e44" }
+      ],
+      yTitle: "Dice Score",
+      yMin: 0, yMax: 1
+    },
+    dice_avg: {
+      caption: "Dice moyen sur les trois classes tumorales (C1+C2+C3), la métrique utilisée pour sauvegarder le meilleur modèle.",
+      datasets: [
+        { label: "Dice moyen tumeur", data: [0.6642, 0.7930, 0.7903, 0.8099, 0.8045], color: "#1a1a1a" }
+      ],
+      yTitle: "Dice Score",
+      yMin: 0, yMax: 1
+    }
+  };
+
+  function init() {
+    var canvas = document.getElementById("metricChart");
+    if (!canvas || typeof Chart === "undefined") return;
+    var ctx = canvas.getContext("2d");
+    var current = "loss";
+
+    function buildChart(key) {
+      var m = metrics[key];
+      var datasets = m.datasets.map(function(ds) {
+        return {
+          label: ds.label,
+          data: ds.data,
+          borderColor: ds.color,
+          backgroundColor: ds.color,
+          borderWidth: 1.75,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.15
+        };
+      });
+      return new Chart(ctx, {
+        type: "line",
+        data: { labels: epochs, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: datasets.length > 1, position: "top", labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                title: function(items) { return "epoch " + items[0].label; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Epoch", font: { size: 11 } },
+              ticks: { font: { size: 10 } },
+              grid: { display: false }
+            },
+            y: {
+              title: { display: true, text: m.yTitle, font: { size: 11 } },
+              min: m.yMin, max: m.yMax,
+              ticks: { font: { size: 10 } },
+              grid: { color: "rgba(20,20,20,.08)" }
+            }
+          }
+        }
+      });
+    }
+
+    var chart = buildChart(current);
+    var captionEl = document.querySelector("[data-metric-caption]");
+    var tabs = document.querySelectorAll(".metric-tab");
+
+    tabs.forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var key = btn.getAttribute("data-metric");
+        if (key === current) return;
+        current = key;
+        tabs.forEach(function(b) {
+          b.classList.toggle("is-active", b === btn);
+          b.setAttribute("aria-selected", b === btn ? "true" : "false");
+        });
+        chart.destroy();
+        chart = buildChart(current);
+        if (captionEl) captionEl.innerHTML = metrics[current].caption;
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<script src="js/main.js"></script>
+</body>
+</html>

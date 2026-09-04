@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projets</title>
+<meta name="description" content="Tous les projets de machine learning et data science de Thibaut JUILLARD, avec code source sur Kaggle.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead__top">
+    <div>
+      <h1 class="masthead__title"><a href="index.html">DAILY NEWS</a></h1>
+      <p class="masthead__sub">cahier de bord - intelligence artificielle &amp; data science</p>
+    </div>
+    <span class="masthead__issue">p.04</span>
+  </div>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Accueil</a>
+    <a href="a-propos.html">À propos</a>
+    <a href="parcours.html">Parcours</a>
+    <a href="projets.html" aria-current="page">Projets</a>
+    <a href="mailto:thibautjuillard21@gmail.com">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <section class="wrap section">
+    <p class="section__label">Le dossier complet</p>
+    <h2 class="misprint" data-text="Tous les projets">Tous les projets</h2>
+    <p class="prose">Chaque projet suit la même structure : contexte, approche, résultats, et ce que j'en ai retenu. Le code complet est sur Kaggle ou/et Github, en général sous forme de notebook exécutable directement.</p>
+
+    <div class="featured-grid">
+
+      <a class="clip-card" href="projet-1.html">
+        <div class="clip-card__thumb" style="background:var(--blue);">🧠</div>
+        <h3>Apprendre à voir avant d'apprendre à classer</h3>
+        <p>Entraîner un encodeur d'images d'IRM cérébrales sans la moindre étiquette, avec une architecture type LeJEPA, puis vérifier la qualité des représentations obtenues avec un simple classifieur linéaire.</p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">LeJEPA</li>
+          <li class="stamp">ViT</li>
+          <li class="stamp">timm</li>
+          <li class="stamp">scikit-learn</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-2.html">
+        <div class="clip-card__thumb" style="background:var(--pink);">🩻</div>
+        <h3>Apprendre à un réseau à repérer un cancer sur un scanner</h3>
+        <p>Trois architectures de CNN codées à la main : VGG19, GoogLeNet et MobileNet. Entraînées from scratch puis par transfert, pour classer des scanners abdominaux comme cancéreux ou non.</p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-3.html">
+        <div class="clip-card__thumb" style="background:var(--yellow); color:var(--ink);">❤️‍🩹</div>
+        <h3>Prédire un risque de crise cardiaque en le transformant en problème de texte</h3>
+        <p>Sur la compétition Kaggle « Heart Attack Risk Analysis », plutôt que d'entraîner un modèle tabulaire classique, j'ai transformé chaque patient en une phrase et fait classer ces phrases par un BERT fine-tuné.</p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">BERT / Transformers</li>
+          <li class="stamp">Données tabulaires</li>
+          <li class="stamp">Compétition</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--blue);">📝</div>
+        <h3>Qwen From scratch</h3>
+        <p>mettre derniere version sur github</p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">NLP</li>
+          <li class="stamp">SFT</li>
+          <li class="stamp">RLHF</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-5.html">
+        <div class="clip-card__thumb" style="background:var(--pink);">🔎</div>
+        <h3>Segmenter avant de conclure</h3>
+        <p>Un U-Net entraîné à délimiter les tumeurs cérébrales sur IRM, épaulé par une tête de classification qui vérifie d'abord qu'une tumeur est bien présente avant de laisser passer le masque de segmentation.</p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">U-Net</li>
+          <li class="stamp">BraTS2020</li>
+          <li class="stamp">Dice Loss</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--yellow);">?</div>
+        <h3>Skin Cancer ViT + Grad-Cam</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/cv-skin-cancer-vit-grad-cam </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--blue);">?</div>
+        <h3>Lung diseases ResNet with Filter</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/cv-lung-disease-resnet-with-filter </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--pink);">?</div>
+        <h3>Bone Facture classification</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/cv-bone-fracture-classification/notebook </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--yellow);">?</div>
+        <h3>Genetic algorithme - MaxOne & Knapsack</h3>
+        <p>code à revoir sur Kaggle : https://www.kaggle.com/code/thibautjuill/genetic-algorithme-maxone-knapsack </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--blue);">?</div>
+        <h3>Avis cinéma Français POS NEG</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/positif-negatif-analyse-avis-cin-ma-fran-ais </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--pink);">?</div>
+        <h3>Translate EN to FR</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/translate-en-to-fr-tensorflow-transformers </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--yellow);">?</div>
+        <h3>SPAM EMAIL Detection</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/spam-e-mail-detection-naive-bayes-tensorflow </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--blue);">?</div>
+        <h3>Tweet Sentiments analyse good bad</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/tweet-sentiments-analyse-good-bad </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--pink);">?</div>
+        <h3>Skin cancer detection with image augmentation</h3>
+        <p>Version ok sur Kaggle : https://www.kaggle.com/code/thibautjuill/skin-cancer-detection-with-image-augmentation </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+      <a class="clip-card" href="projet-4.html">
+        <div class="clip-card__thumb" style="background:var(--yellow);">?</div>
+        <h3>RL DQN</h3>
+        <p>Version ok sur github : https://github.com/Thibaut3/RL-DQN </p>
+        <ul class="taglist">
+          <li class="stamp stamp--pink">PyTorch</li>
+          <li class="stamp stamp--blue">CNN</li>
+          <li class="stamp">Imagerie médicale</li>
+          <li class="stamp">Transfer Learning</li>
+        </ul>
+      </a>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h3>On en parle ?</h3>
+      <p><a href="mailto:thibautjuillard21@gmail.com">thibautjuillard21@gmail.com</a></p>
+    </div>
+    <div>
+      <h3>Ailleurs</h3>
+      <p>
+        <a href="https://www.linkedin.com/in/thibaut-juillard-b50321193/" target="_blank" rel="noopener">LinkedIn</a> ·
+        <a href="https://github.com/Thibaut3" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.kaggle.com/thibautjuill" target="_blank" rel="noopener">Kaggle</a>
+      </p>
+    </div>
+    <div class="site-stamp" role="img" aria-label="Édition 2026, imprimé numériquement"><span data-year>Édition</span></div>
+  </div>
+  <small>Merci de prendre le temps de parcourir mon Portfolio, j'essaie de le maintenir à jour !</small>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

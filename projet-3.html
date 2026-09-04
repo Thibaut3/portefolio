@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faire lire des données patients par un BERT pour prédire un risque cardiaque</title>
+<meta name="description" content="Compétition Kaggle Heart Attack Risk Analysis : transformer des données patient tabulaires en phrases pour les faire classer par un modèle BERT fine-tuné, plutôt que par un modèle tabulaire classique.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead__top">
+    <div>
+      <h1 class="masthead__title"><a href="index.html">DAILY NEWS</a></h1>
+      <p class="masthead__sub">cahier de bord - intelligence artificielle &amp; data science</p>
+    </div>
+    <span class="masthead__issue">Dossier <span num-projet></span>/<span nb-projets></span></span></span>
+  </div>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Accueil</a>
+    <a href="a-propos.html">À propos</a>
+    <a href="parcours.html">Parcours</a>
+    <a href="projets.html" aria-current="page">Projets</a>
+    <a href="mailto:thibautjuillard21@gmail.com">Contact</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="wrap project-hero torn-bottom">
+    <p class="dossier-num" aria-hidden="true" num-projet></p>
+    <p class="kicker">NLP &amp; Données de santé</p>
+    <h1 class="misprint" data-text="Prédire un risque de crise cardiaque en le transformant en problème de texte">Prédire un risque de crise cardiaque en le transformant en problème de texte</h1>
+    <p class="subtitle">Sur la compétition Kaggle « Heart Attack Risk Analysis », plutôt que d'entraîner un modèle tabulaire classique, j'ai transformé chaque patient en une phrase et fait classer ces phrases par un BERT fine-tuné.</p>
+
+    <div class="meta-row">
+      <div class="meta-box"><b>Compétition Kaggle</b>Type</div>
+      <div class="meta-box"><b>Solo</b>Équipe</div>
+      <div class="meta-box"><b>2024</b>Réalisé en</div>
+    </div>
+
+    <ul class="taglist" aria-label="Technologies utilisées">
+      <li class="stamp stamp--pink">PyTorch</li>
+      <li class="stamp stamp--blue">BERT / Transformers</li>
+      <li class="stamp">Données tabulaires</li>
+      <li class="stamp">Compétition</li>
+    </ul>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Le contexte</p>
+    <h2>Le problème à résoudre</h2>
+    <div class="prose">
+      <p class="dropcap">La compétition Kaggle <em>Heart Attack Risk Analysis</em> propose un jeu de données patients (âge, cholestérol, tension, mode de vie, antécédents...) et demande de prédire, pour chacun, s'il présente un risque de crise cardiaque : une classification binaire sur données tabulaires, l'un des cas d'usage les plus classiques du machine learning.</p>
+      <p>Le réflexe naturel sur ce genre de jeu de données est de sortir un Random Forest ou un gradient boosting (LightGBM). Je voulais plutôt tester une idée plus inhabituelle : et si on donnait ces données à un modèle de langage, en les décrivant simplement en phrases ? Ce projet est autant une expérience sur les limites de cette approche qu'une tentative de scorer sur la compétition.</p>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">L'approche</p>
+    <h2>Comment j'ai construit la solution</h2>
+    <div class="prose">
+      <p>Première étape, classique : encoder les variables catégorielles (sexe, mode de vie, pays...) en entiers via des dictionnaires de correspondance construits sur le jeu d'entraînement, pour pouvoir les réutiliser à l'identique sur le jeu de test.</p>
+      <p>Deuxième étape, moins classique : au lieu de passer ces colonnes numériques directement à un modèle tabulaire, je reconstruis une phrase pour chaque patient, du type <code>"Age: 67, Cholesterol: 208, Sex: 1, ..."</code>, en concaténant chaque nom de colonne et sa valeur. Le problème de classification tabulaire devient alors un problème de classification de texte.</p>
+      <p>Ces phrases sont ensuite tokenisées et données à un <code>BertForSequenceClassification</code> (bert-base-uncased) fine-tuné avec deux étiquettes, via le <code>Trainer</code> de la bibliothèque Hugging Face <code>transformers</code>. Le modèle fine-tuné est ensuite rechargé pour l'inférence sur le jeu de test, en reproduisant exactement le même pipeline de textification que pour l'entraînement afin d'éviter tout écart entre les deux.</p>
+      <p>Dernier détail qui a son importance : les probabilités renvoyées par le modèle sur le jeu de test étaient très resserrées autour d'une même valeur plutôt que bien réparties entre 0 et 1. Un seuil de décision fixé au hasard à 0,5 aurait donc été arbitraire. J'ai inspecté la distribution réelle des probabilités prédites pour choisir un seuil de coupure plus cohérent avec le déséquilibre des classes du jeu de données, plutôt que d'utiliser la valeur par défaut.</p>
+    </div>
+    <p class="margin-note">Le pari du projet n'était pas de battre un LightGBM ou un XGBoost sur ce jeu de données (un modèle de gradient boosting reste un choix bien plus naturel et efficace pour des données tabulaires), mais de voir si un modèle de langage pré-entraîné sur du texte généraliste arrive malgré tout à extraire un signal utile une fois les données transformées en phrases.</p>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Résultats</p>
+    <h2>Ce que le modèle donne en pratique</h2>
+    <div class="stat-grid">
+      <div class="stat"><b>0.63947</b><span>Score final</span></div>
+      <div class="stat"><b>4/102</b><span>Classement sur le leaderboard</span></div>
+      <div class="stat"><b>bert-base-uncased</b><span>Modèle utilisé</span></div>
+    </div>
+    <p class="prose">Bien qu'arrivé 4ᵉ à la compétition soit un bon score, l'accuracy n'est pas très élévé (le premier étant à 0.64061). Néanmoins, cette approche semble être au moins aussi performante qu'un LightGBM ou XGBoost classique.</p>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Ce que j'ai retenu</p>
+    <h2>Le vrai apprentissage</h2>
+    <div class="prose">
+      <p>Transformer des données tabulaires en texte pour les faire lire par un modèle de langage est un détournement amusant, mais ça a un coût : on perd la structure explicite des colonnes que des modèles comme LightGBM exploitent nativement (splits sur une variable précise, interactions entre features), et on la remplace par l'espoir que le modèle la retrouve lui-même dans une phrase. C'est aussi beaucoup plus lourd à entraîner et à faire tourner qu'un modèle tabulaire classique, pour un gain qui reste à démontrer sur ce type de données.</p>
+      <p>Le détail du seuil de décision m'a aussi rappelé qu'un modèle de classification binaire ne rend jamais vraiment un score entre 0 et 1 bien réparti par magie : il faut regarder la distribution réelle des prédictions avant de choisir où couper, plutôt que de garder 0,5 par réflexe.</p>
+    </div>
+  </section>
+
+  <section class="wrap section--tight">
+    <div class="code-links">
+      <a class="btn" href="https://www.kaggle.com/code/thibautjuill/heart-attack-analysis" target="_blank" rel="noopener">Voir le code sur Kaggle</a>
+    </div>
+  </section>
+
+  <nav class="wrap project-pager" aria-label="Navigation entre projets">
+    <a href="projet-2.html">← Apprendre à un réseau à repérer un cancer sur un scanner</a>
+    <a href="projet-4.html">? →</a>
+  </nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h3>On en parle ?</h3>
+      <p><a href="mailto:thibautjuillard21@gmail.com">thibautjuillard21@gmail.com</a></p>
+    </div>
+    <div>
+      <h3>Ailleurs</h3>
+      <p>
+        <a href="https://www.linkedin.com/in/thibaut-juillard-b50321193/" target="_blank" rel="noopener">LinkedIn</a> ·
+        <a href="https://github.com/Thibaut3" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.kaggle.com/thibautjuill" target="_blank" rel="noopener">Kaggle</a>
+      </p>
+    </div>
+    <div class="site-stamp" role="img" aria-label="Édition 2026, imprimé numériquement"><span data-year>Édition</span></div>
+  </div>
+  <small>Merci de prendre le temps de parcourir mon Portfolio, j'essaie de le maintenir à jour !</small>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

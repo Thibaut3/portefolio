@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apprendre à un réseau à repérer un cancer sur un scanner</title>
+<meta name="description" content="Détection du cancer du côlon sur des scanners abdominaux : trois architectures de CNN (VGG19, GoogLeNet, MobileNet) codées à la main et comparées, from scratch et par transfert.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead__top">
+    <div>
+      <h1 class="masthead__title"><a href="index.html">DAILY NEWS</a></h1>
+      <p class="masthead__sub">cahier de bord - intelligence artificielle &amp; data science</p>
+    </div>
+    <span class="masthead__issue">Dossier <span num-projet></span>/<span nb-projets></span></span></span>
+  </div>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Accueil</a>
+    <a href="a-propos.html">À propos</a>
+    <a href="parcours.html">Parcours</a>
+    <a href="projets.html" aria-current="page">Projets</a>
+    <a href="mailto:thibautjuillard21@gmail.com">Contact</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="wrap project-hero torn-bottom">
+    <p class="dossier-num" aria-hidden="true" num-projet></p>
+    <p class="kicker">Computer Vision · Imagerie Médicale</p>
+    <h1 class="misprint" data-text="Apprendre à un réseau à repérer un cancer sur un scanner">Apprendre à un réseau à repérer un cancer sur un scanner</h1>
+    <p class="subtitle">Trois architectures de CNN codées à la main : VGG19, GoogLeNet et MobileNet. Entraînées from scratch puis par transfert, pour classer des scanners abdominaux comme cancéreux ou non.</p>
+
+    <div class="meta-row">
+      <div class="meta-box"><b>2 semaines</b>Durée</div>
+      <div class="meta-box"><b>Projet perso</b>Type</div>
+      <div class="meta-box"><b>2025</b>Réalisé en</div>
+    </div>
+
+    <ul class="taglist" aria-label="Technologies utilisées">
+      <li class="stamp stamp--pink">PyTorch</li>
+      <li class="stamp stamp--blue">CNN</li>
+      <li class="stamp">Imagerie médicale</li>
+      <li class="stamp">Transfer Learning</li>
+    </ul>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Le contexte</p>
+    <h2>Le problème à résoudre</h2>
+    <div class="prose">
+      <p class="dropcap">Repérer un cancer du côlon sur un scanner abdominal demande à un radiologue un œil entraîné et du temps, une ressource rare quand les examens s'accumulent. L'idée de ce projet était de voir jusqu'où un réseau de neurones convolutif peut aller sur cette tâche de classification binaire : un scanner donné montre-t-il un cancer, ou non ?</p>
+      <p>Plutôt que de partir directement d'une bibliothèque toute faite, j'ai voulu comprendre en profondeur le fonctionnement de trois architectures de CNN devenues des classiques : VGG19, GoogLeNet et MobileNet. En les réimplémentant moi-même en PyTorch, couche par couche, avant de les comparer à leurs versions pré-entraînées sur ImageNet.</p>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">L'approche</p>
+    <h2>Comment j'ai construit la solution</h2>
+    <div class="prose">
+      <p>Le jeu de données (ColonCancerCT-2025) contient environ 7 900 images d'entraînement et 1 700 images de test, réparties en deux classes : cancer et non-cancer. J'ai écrit une classe <code>Dataset</code> PyTorch sur mesure qui valide chaque image à l'ouverture et écarte les fichiers corrompus, puis un pipeline de prétraitement qui force la conversion en RGB (les scanners n'ont pas tous le même nombre de canaux), redimensionne les images en 224×224, applique un flip horizontal aléatoire et normalise les pixels.</p>
+      <p>J'ai ensuite recodé trois architectures à la main : VGG19 (un empilement profond de petites convolutions 3×3), GoogLeNet avec ses modules Inception à branches parallèles et ses deux classifieurs auxiliaires, et MobileNet avec ses convolutions séparables en profondeur conçues pour être légères. Chacune a été entraînée dix epochs avec AdamW, un scheduler qui réduit le taux d'apprentissage en cas de stagnation, et un clipping de gradient. J'ai répété l'expérience une seconde fois en partant cette fois de poids pré-entraînés sur ImageNet, backbone gelé, pour ne réentraîner que la tête de classification (histoire de comparer l'apprentissage from scratch et le transfert sur un jeu de données bien plus petit et bien plus spécialisé que ImageNet).</p>
+    </div>
+    <p class="margin-note">Résultat inattendu : VGG19 et MobileNet entraînés from scratch n'ont jamais décollé. Ils sont restés bloqués à prédire systématiquement la classe majoritaire (≈60% d'exactitude, AUC ≈0,50, autrement dit pas mieux que le hasard). GoogLeNet, lui, a parfaitement convergé from scratch (96% d'exactitude), sans doute grâce à ses classifieurs auxiliaires qui injectent un signal de gradient au milieu du réseau et évitent le blocage que les deux autres architectures ont subi.</p>
+
+    <div class="visual-frame"><img src="ressources/projet2/p2_roc_curves.png" alt="ROC Curves des modèles"></div>
+    <div class="visual-frame"><img src="ressources/projet2/p2_comparaison.png" alt="Comparaison modèles"></div>
+    <div class="visual-frame"><img src="ressources/projet2/p2_performance_comparaison.png" alt="Comparaison des performances des modèles"></div>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Résultats</p>
+    <h2>Ce que le modèle donne en pratique</h2>
+    <div class="stat-grid">
+      <div class="stat"><b>98,8%</b><span>Meilleure accuracy (VGG19 pré-entraîné)</span></div>
+      <div class="stat"><b>7 937</b><span>Scanners utilisés pour l'entraînement</span></div>
+      <div class="stat"><b>6</b><span>Configurations de modèles comparées</span></div>
+    </div>
+    <p class="prose">Le modèle le plus performant est le VGG19 pré-entraîné, avec 98,8% d'exactitude et une AUC de 0,9998. Le GoogLeNet entraîné from scratch tient étonnamment bien la comparaison (96%, AUC 0,996), pendant que sa version pré-entraînée fait moins bien (83%). Un signe que geler des poids appris sur des photos ImageNet ne s'adapte pas forcément aussi bien à la texture particulière d'un scanner médical, selon l'architecture. MobileNet, lui, n'a fonctionné correctement qu'une fois pré-entraîné (84%), restant bloqué comme VGG19 quand il partait de zéro.</p>
+  </section>
+
+  <section class="wrap section">
+    <p class="section__label">Ce que j'ai retenu</p>
+    <h2>Le vrai apprentissage</h2>
+    <div class="prose">
+      <p>Le transfert de poids pré-entraînés n'est pas une solution magique universelle : son efficacité dépend autant de l'architecture que de la tâche elle-même. J'ai aussi découvert de façon très concrète pourquoi les classifieurs auxiliaires de GoogLeNet existent (sans eux, VGG19 et MobileNet sont restés piégés par un problème de gradient qui s'évanouit dans les couches profondes, et rien dans la courbe de perte ne le laissait deviner avant d'avoir comparé les architectures entre elles).</p>
+    </div>
+  </section>
+
+  <section class="wrap section--tight">
+    <div class="code-links">
+      <a class="btn" href="https://www.kaggle.com/code/thibautjuill/cv-colon-cancer-classification" target="_blank" rel="noopener">Voir le code sur Kaggle</a>
+      <a class="btn btn--outline" href="https://github.com/Thibaut3/CV-Colon-Cancer-Classification" target="_blank" rel="noopener">Dépôt GitHub</a>
+    </div>
+  </section>
+
+  <nav class="wrap project-pager" aria-label="Navigation entre projets">
+    <a href="projet-1.html">← Apprendre à voir avant d'apprendre à classer</a>
+    <a href="projet-3.html">Prédire un risque de crise cardiaque en le transformant en problème de texte →</a>
+  </nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h3>On en parle ?</h3>
+      <p><a href="mailto:thibautjuillard21@gmail.com">thibautjuillard21@gmail.com</a></p>
+    </div>
+    <div>
+      <h3>Ailleurs</h3>
+      <p>
+        <a href="https://www.linkedin.com/in/thibaut-juillard-b50321193/" target="_blank" rel="noopener">LinkedIn</a> ·
+        <a href="https://github.com/Thibaut3" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.kaggle.com/thibautjuill" target="_blank" rel="noopener">Kaggle</a>
+      </p>
+    </div>
+    <div class="site-stamp" role="img" aria-label="Édition 2026, imprimé numériquement"><span data-year>Édition</span></div>
+  </div>
+  <small>Merci de prendre le temps de parcourir mon Portfolio, j'essaie de le maintenir à jour !</small>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
